@@ -1,0 +1,7 @@
+tunnel: your-tunnel-uuid-here
+credentials-file: /etc/cloudflared/creds.json
+
+ingress:
+  - hostname: guardian.yourdomain.com
+    service: http://guardian:3012
+  - service: http_status:404

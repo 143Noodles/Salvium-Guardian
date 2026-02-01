@@ -1,0 +1,45 @@
+# Salvium Guardian - Automated Bounty Escrow
+#
+# Setup:
+#   1. Copy .env.example to .env
+#   2. Set your WALLET_PASSWORD in .env
+#   3. Run: docker compose up -d
+#
+# That's it! The guardian will be live at https://guardian.salvium.tools
+
+services:
+  guardian:
+    build: .
+    image: salvium-guardian:latest
+    container_name: salvium-guardian
+    restart: unless-stopped
+    ports:
+      - "3012:3012"
+    volumes:
+      - guardian-data:/data
+    environment:
+      - PORT=3012
+      - NETWORK=${NETWORK:-mainnet}
+      - WALLET_PASSWORD=${WALLET_PASSWORD:?Set WALLET_PASSWORD in .env}
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3012/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: salvium-guardian-tunnel
+    restart: unless-stopped
+    command: tunnel --config /etc/cloudflared/config.yml run
+    volumes:
+      - ./tunnel/config.yml:/etc/cloudflared/config.yml:ro
+      - ./tunnel/credentials.json:/etc/cloudflared/creds.json:ro
+    depends_on:
+      guardian:
+        condition: service_healthy
+
+volumes:
+  guardian-data:
+    name: salvium-guardian-data
